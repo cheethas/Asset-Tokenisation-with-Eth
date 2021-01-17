@@ -23,9 +23,15 @@ contract("Token Contract", (accounts) => {
     // delegate accounts
     const [deployerAccount, recipientAccount, anotherAccount] = accounts;
 
+    // The before Each hook allows us to redeploy our smart contract before each of the test cases run
+    // Therefore we are completely detatched from what happens within our migrations file.
+    beforeEach(async() => {
+        this.tokenInstance = await MyToken.new(1000000);
+    })
+
     it("All tokens should be in my account", async() => {
         // get the token instance from truffle
-        const tokenInstance = await MyToken.deployed();
+        const tokenInstance = this.tokenInstance;
         // this is a solidity getter and so can easily be accessed in this fashion
         let totalSupply = await tokenInstance.totalSupply();
         // expect the balance of the account that created to contract to be the total contract amount
@@ -34,7 +40,7 @@ contract("Token Contract", (accounts) => {
 
     it("Is possible to send tokens between accounts", async() => {
         const sendTokens = 1;
-        const tokenInstance = await MyToken.deployed();
+        const tokenInstance = this.tokenInstance;
         let totalSupply = await tokenInstance.totalSupply();
         expect(tokenInstance.balanceOf(deployerAccount)).to.eventually.be.a.bignumber.equal(totalSupply);
         
@@ -45,7 +51,7 @@ contract("Token Contract", (accounts) => {
     });
 
     it("is not possible to send more tokens than are available in total", async() => {
-        const tokenInstance = await MyToken.deployed;
+        const tokenInstance = this.tokenInstance;
         let balanceOfDeployer = await tokenInstance.balanceOf(deployerAccount);
 
         // we will expect this to fail, as there are too many tokens being sent, so we say that it will eventually be rejected
