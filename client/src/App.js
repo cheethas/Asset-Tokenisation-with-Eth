@@ -1,31 +1,51 @@
 import React, { Component } from "react";
-import SimpleStorageContract from "./contracts/SimpleStorage.json";
+
+// import our contracts
+import MyToken from "./contracts/MyToken.json";
+import MyTokenSale from "./contracts/MyTokenSale.json";
+import KYC from "./contracts/KYCContract.json";
+
+// import web 3
 import getWeb3 from "./getWeb3";
 
+// styling
 import "./App.css";
 
 class App extends Component {
-  state = { storageValue: 0, web3: null, accounts: null, contract: null };
+  state = { loaded: false, kycAddress: "123"};
 
   componentDidMount = async () => {
     try {
       // Get network provider and web3 instance.
-      const web3 = await getWeb3();
+      this.web3 = await getWeb3();
 
       // Use web3 to get the user's accounts.
-      const accounts = await web3.eth.getAccounts();
+      this.accounts = await this.web3.eth.getAccounts();
 
       // Get the contract instance.
-      const networkId = await web3.eth.net.getId();
-      const deployedNetwork = SimpleStorageContract.networks[networkId];
-      const instance = new web3.eth.Contract(
-        SimpleStorageContract.abi,
-        deployedNetwork && deployedNetwork.address,
+      this.networkId = await this.web3.eth.net.getId();
+      this.deployedNetwork = MyToken.networks[this.networkId];
+      
+      // get the token contract 
+      this.tokenInstance = new this.web3.eth.Contract(
+        MyToken.abi,
+        this.deployedNetwork && this.deployedNetwork.address,
+      );
+
+      // get the token sale contract
+      this.tokenSaleInstance = new this.web3.eth.Contract(
+        MyTokenSale.abi,
+        this.deployedNetwork && this.deployedNetwork.address,
+      );
+
+      // get the KYC contract
+      this.kycInstance = new this.web3.eth.Contract(
+        KYC.abi,
+        this.deployedNetwork && this.deployedNetwork.address,
       );
 
       // Set web3, accounts, and contract to the state, and then proceed with an
-      // example of interacting with the contract's methods.
-      this.setState({ web3, accounts, contract: instance }, this.runExample);
+      this.setState({loaded: true});
     } catch (error) {
       // Catch any errors for any of the above operations.
       alert(
@@ -35,36 +55,38 @@ class App extends Component {
     }
   };
 
-  runExample = async () => {
-    const { accounts, contract } = this.state;
 
-    // Stores a given value, 5 by default.
-    await contract.methods.set(5).send({ from: accounts[0] });
+  // handle any generic input change
+  handleInputChange = (event) => {
+    const target = event.target;
+    const value = target.type == "checkbox" ? target.checked : target.value;
+    const name = target.name;
+    // inset the value of name into the state setter
+    this.setState({
+      [name]: value
+    });
+  }
 
-    // Get the value from the contract to prove it worked.
-    const response = await contract.methods.get().call();
+  // handle when the user clicks the kyc submit button
+  handleKycSubmit = async() => {
+    // call the set kyc completed functionality to write the address of the user to the smart contract
+    await this.kycInstance.methods.setKycCompleted(this.state.kycAddress).send({from: this.accounts[0]});
+    // notify the user that the operation has completed
+    alert("KYC address " + this.state.kycAddress + " added successfully");
+  }
 
-    // Update state with the result.
-    this.setState({ storageValue: response });
-  };
 
   render() {
-    if (!this.state.web3) {
+    if (!this.state.loaded) {
       return <div>Loading Web3, accounts, and contract...</div>;
     }
     return (
       <div className="App">
-        <h1>Good to Go!</h1>
-        <p>Your Truffle Box is installed and ready.</p>
-        <h2>Smart Contract Example</h2>
-        <p>
-          If your contracts compiled and migrated successfully, below will show
-          a stored value of 5 (by default).
-        </p>
-        <p>
-          Try changing the value stored on <strong>line 40</strong> of App.js.
-        </p>
-        <div>The stored value is: {this.state.storageValue}</div>
+        <h1>Bread Token!</h1>
+        <p>Bread token token sale, get yours today</p>
+        <h2>KYC Whitelisting</h2>
+        Address to allow: <input type="text" name="kycAddress" value={this.state.kycAddress} onChange={this.handleInputChange}/>
+        <button type="button" name="addToWhitelist" onClick={this.handleKycSubmit}>Add to Whitelist</button>
       </div>
     );
   }
