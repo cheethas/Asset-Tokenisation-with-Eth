@@ -1,5 +1,6 @@
 var MyToken = artifacts.require("./MyToken.sol");
 var MyTokenSale = artifacts.require("./MyTokenSale.sol");
+var MyKYC = artifacts.require("./KYCContract.sol");
 
 require("dotenv").config({path: "../.env"});
 const BN = web3.utils.BN;
@@ -13,12 +14,15 @@ module.exports = async function(deployer) {
   var address = await web3.eth.getAccounts();
   var initialTokenAmount = new BN(process.env.INITIAL_TOKENS);
   await deployer.deploy(MyToken, initialTokenAmount);
+  
+  // deploy the kyc contract as it is required as an arguement for the token sale
+  await deployer.deploy(MyKYC);
 
   // the crowd sale takes the rate at which tokens are minted - in this case 1
   // it will take the address to send all of the funds, which is the creator address in this case
   // then it takes the address of the ERC20 token that is being minted!! as we await for the previous operation, it has 
   // already been deployed to the chain and assigned an address so we can just call it's address here!
-  await deployer.deploy(MyTokenSale, 1, address[0], MyToken.address);
+  await deployer.deploy(MyTokenSale, 1, address[0], MyToken.address, MyKYC.address);
 
   // get the instance of the deployed token, then send all of the funds to the token sale
   let instance = await MyToken.deployed();

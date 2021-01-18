@@ -6,6 +6,7 @@ const { contracts_build_directory } = require("../truffle-config");
  */
 const MyTokenSaleContract = artifacts.require("./MyTokenSale.sol");
 const MyToken = artifacts.require("./MyToken.sol");
+const KYCContract = artifacts.require("./KYCContract.sol");
 
 const chai = require("./setupChai.js");
 // Shorten the syntax to use expect
@@ -38,8 +39,13 @@ contract("My Token Sale", async(accounts) => {
     it("Should be possible to purchase tokens", async () => {
         let tokenInstance = await MyToken.deployed();
         let tokenSaleInstance = await MyTokenSaleContract.deployed();
+        let kycInstance = await KYCContract.deployed();
 
         let balanceBefore = await tokenInstance.balanceOf(deployerAccount);
+
+        // to allow a transaction to take place, we need to whitelist the addresses that are performing the transactions with KYC!!
+        expect(kycInstance.setKycCompleted(deployerAccount, {from: deployerAccount})).to.eventually.be.fulfilled; // wait for it to be fufilled successfully
+
 
         // we will now purchase a token with eth from the deployer account, then check on the erc20 contract that the
         // deployer account has an extra token
@@ -47,6 +53,7 @@ contract("My Token Sale", async(accounts) => {
         expect(tokenSaleInstance.sendTransaction({from: deployerAccount, value: web3.utils.toWei("1", "wei")})).to.be.fulfilled;
 
         // check that within the token contract that the deployer has one extra token
-        return expect(tokenInstance.balanceOf(deployerAccount)).to.eventually.be.a.bignumber.equal(balanceBefore.add(new BN(1)));
+        let balanceAfter = balanceBefore.add(new BN(1));
+        return expect(tokenInstance.balanceOf(deployerAccount)).to.eventually.be.a.bignumber.equal(balanceAfter);
     });
 });
