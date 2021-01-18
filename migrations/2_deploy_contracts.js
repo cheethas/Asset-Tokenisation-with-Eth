@@ -1,6 +1,8 @@
 var MyToken = artifacts.require("./MyToken.sol");
 var MyTokenSale = artifacts.require("./MyTokenSale.sol");
 
+require("dotenv").config({path: "../.env"});
+const BN = web3.utils.BN;
 // Use the truffle provided deployer object to deploy the ERC 20 contract to the chain
 // As the constructor for the mytoken contract contains an argument 
 // We must add another parameter which is the initial supply of the token.
@@ -9,7 +11,7 @@ var MyTokenSale = artifacts.require("./MyTokenSale.sol");
 // We must manually do this from deployment, which is a bit of a pain, but here we are :)
 module.exports = async function(deployer) {
   var address = await web3.eth.getAccounts();
-  var initialTokenAmount = 1000000;
+  var initialTokenAmount = new BN(process.env.INITIAL_TOKENS);
   await deployer.deploy(MyToken, initialTokenAmount);
 
   // the crowd sale takes the rate at which tokens are minted - in this case 1
