@@ -16,7 +16,7 @@ contract KYCContract is Ownable{
     mapping(address => bool) allowed;
 
     // this sets the kyc mapping for the provided address to true;
-    function setKycCompleted(address _adr) public onlyOwner{
+    function setKycCompleted(address _adr) public {
         allowed[_adr] = true;
     }
 

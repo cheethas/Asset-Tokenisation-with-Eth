@@ -2,7 +2,6 @@ const path = require("path");
 require("dotenv").config({path: "./.env"});
 
 // set the system up using the HDWallet provider
-const HDWallet = require("@truffle/hdwallet-provider");
 const HDWalletProvider = require("@truffle/hdwallet-provider");
 const accountIndex = 0;
 

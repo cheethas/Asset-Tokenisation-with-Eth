@@ -12,7 +12,7 @@ import getWeb3 from "./getWeb3";
 import "./App.css";
 
 class App extends Component {
-  state = { loaded: false, kycAddress: "123"};
+  state = { loaded: false, kycAddress: "123", purchaseTokenAddr: null, tokenCount: 0};
 
   componentDidMount = async () => {
     try {
@@ -29,23 +29,26 @@ class App extends Component {
       // get the token contract 
       this.tokenInstance = new this.web3.eth.Contract(
         MyToken.abi,
-        this.deployedNetwork && this.deployedNetwork.address,
+        MyToken.networks[this.networkId] && MyToken.networks[this.networkId].address,
       );
 
       // get the token sale contract
       this.tokenSaleInstance = new this.web3.eth.Contract(
         MyTokenSale.abi,
-        this.deployedNetwork && this.deployedNetwork.address,
+        MyTokenSale.networks[this.networkId] && MyTokenSale.networks[this.networkId].address,
       );
 
       // get the KYC contract
       this.kycInstance = new this.web3.eth.Contract(
         KYC.abi,
-        this.deployedNetwork && this.deployedNetwork.address,
+        KYC.networks[this.networkId] && KYC.networks[this.networkId].address,
       );
 
+      // set up out code to listen to token transfers!!
+      this.listenToTokenTransfer();
+
       // Set web3, accounts, and contract to the state, and then proceed with an
-      this.setState({loaded: true});
+      this.setState({loaded: true, purchaseTokenAddr: MyTokenSale.networks[this.networkId].address}, this.updateUserTokens);
     } catch (error) {
       // Catch any errors for any of the above operations.
       alert(
@@ -69,10 +72,38 @@ class App extends Component {
 
   // handle when the user clicks the kyc submit button
   handleKycSubmit = async() => {
+    console.log(this.state.kycAddress);
+    console.log(this.accounts[0]);
     // call the set kyc completed functionality to write the address of the user to the smart contract
     await this.kycInstance.methods.setKycCompleted(this.state.kycAddress).send({from: this.accounts[0]});
     // notify the user that the operation has completed
     alert("KYC address " + this.state.kycAddress + " added successfully");
+  }
+
+  // when the user purchases tokens from the pag
+  updateUserTokens = async () => {
+    // call operations are always free!
+    let userTokens = await this.tokenInstance.methods.balanceOf(this.accounts[0]).call();
+    this.setState({tokenCount: userTokens});
+  }
+
+  // listen to whenever the user updates their token amount
+  // you can listen to events as normal, but if they are indexed, then you can filter out certain events from the side chain and only
+  // listen to the important ones
+  listenToTokenTransfer = () => {
+    // listen only when the to field is the currently logged in account - then recall the update user tokens function and read 
+    // the user's balance from the chain
+    this.tokenInstance.events.Transfer({to: this.accounts[0]}).on("data", this.updateUserTokens);
+  }
+
+  handleTokenPurchase = async () => {
+    // remember to include the value field !!!
+    await this.tokenSaleInstance.methods.buyTokens(this.accounts[0])
+      .send({
+        from: this.accounts[0], 
+        value: this.web3.utils.toWei("1", "wei")
+      }
+    );
   }
 
 
@@ -87,6 +118,9 @@ class App extends Component {
         <h2>KYC Whitelisting</h2>
         Address to allow: <input type="text" name="kycAddress" value={this.state.kycAddress} onChange={this.handleInputChange}/>
         <button type="button" name="addToWhitelist" onClick={this.handleKycSubmit}>Add to Whitelist</button>
+        <p>If you want to purchase tokens, send Wei to this address: {this.state.purchaseTokenAddr}</p>
+        <p>You currently have {this.state.tokenCount} BREAD tokens</p>
+        <button type="button" onClick={this.handleTokenPurchase}>Click here to buy more tokens</button>
       </div>
     );
   }
